@@ -134,8 +134,7 @@ fi
 dump_sql $MASTER_PORT /tmp/source.sql
 
 # Copy PostGIS to the target cluster
-scp postgis/postgis* gpadmin@mdw:/tmp/
-scp postgis_254_gpdb6/postgis* gpadmin@mdw:/tmp/postgis-2.5.4-gp6-rhel7-x86_64.gppkg
+scp madlib_target/madlib* gpadmin@mdw:/tmp/
 
 # Now do the upgrade.
 LINK_MODE=""
@@ -177,8 +176,8 @@ time ssh mdw bash <<'EOF'
     # gppkg failed. (Reason='Cannot connect to GPDB version 5 from installed version 6') exiting...
     # But again at this point in the upgrade the target cluster does not yet exist.
 
-    echo "Installing to PostGIS 2.1.5 on target cluster..."
-    gppkg -i /tmp/postgis-2.1.5*gp6*.gppkg
+    echo "Installing MADlib on target cluster..."
+    gppkg -i /tmp/madlib*gp6*.gppkg
 
     gpstop -a
 EOF
@@ -190,10 +189,6 @@ time ssh mdw bash <<'EOF'
     export GPHOME_SOURCE=/usr/local/greenplum-db-source
     export GPHOME_TARGET=/usr/local/greenplum-db-target
     export MASTER_PORT=5432
-
-    echo "Before gpupgrade, but after installing PostGIS on target cluster..."
-    psql -d postgres -c "SELECT PostGIS_Version();"
-    psql -d postgres -c "SELECT * FROM pg_extension;"
 
     ###################################
     # Finish upgrade
@@ -210,8 +205,7 @@ time ssh mdw bash <<'EOF'
     gpupgrade finalize --non-interactive
 
     echo "After gpupgrade..."
-    psql -d postgres -c "SELECT PostGIS_Version();"
-    psql -d postgres -c "SELECT * FROM pg_extension;"
+    psql -d postgres -c "SELECT madlib.version();"
 EOF
 
 echo 'Get PostGIS data in target cluster...'
@@ -223,15 +217,13 @@ ssh mdw "
     export MASTER_PORT=5432
 
     ###################################
-    # Finish PostGIS 2.1.5 Installation
+    # Test MADlib Installation
     ###################################
 
-    psql -d postgres -f /usr/local/greenplum-db-target/share/postgresql/contrib/postgis-2.1/postgis_replace_views.sql
-
     psql -d postgres <<SQL_EOF
-        SELECT COUNT(*) FROM test_upgrade_obj WHERE st_astext(geom) = 'POLYGON((41 20,41 0,21 0,1 20,1 40,21 40,41 20))';
-        SELECT COUNT(*) FROM test_upgrade_obj WHERE st_astext(geog) = 'POINT EMPTY';
+        SELECT * FROM table_dep_svec order by id;
 SQL_EOF
+    /usr/local/greenplum-db-target/madlib/bin/madpack -p greenplum -c /postgres dev-check -t linalg
 "
 
 ## On GPDB version other than 5, set the gucs before taking dumps
@@ -251,37 +243,3 @@ dump_sql ${MASTER_PORT} /tmp/target.sql
 if ! compare_dumps /tmp/source.sql /tmp/target.sql; then
     echo 'error: before and after dumps differ'
 fi
-
-echo 'Upgrade PostGIS from 2.1.5 to 2.5.4...'
-ssh mdw bash <<'EOF'
-    source /usr/local/greenplum-db-target/greenplum_path.sh
-    export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
-    export MASTER_PORT=5432
-
-    echo "Applying PostGIS 2.1.5 improvements to workaround 2.5.4 upgrade issues..."
-    psql -d postgres -f /usr/local/greenplum-db-target/share/postgresql/contrib/postgis-2.1/postgis_enable_operators.sql
-
-    echo "Before installing to PostGIS 2.5.4..."
-    psql -d postgres -c "SELECT PostGIS_Version();"
-    psql -d postgres -c "SELECT * FROM pg_extension;"
-
-    # See: https://greenplum.docs.pivotal.io/6-16/analytics/postgis-upgrade.html
-    gppkg -i /tmp/postgis-2.5.4*gp6*.gppkg
-    /usr/local/greenplum-db-target/share/postgresql/contrib/postgis-2.5/postgis_manager.sh postgres upgrade
-
-    echo "Removing PostGIS 2.1.5..."
-    # FIXME: This also removes libgeos_c.so.
-    # gppkg -r postgis-2.1.5
-
-    echo "After installing to PostGIS 2.5.4..."
-    psql -d postgres -c "SELECT PostGIS_Version();"
-    psql -d postgres -c "SELECT * FROM pg_extension;"
-
-    echo "Verifying PostGIS 2.5.4..."
-    psql -d postgres <<SQL_EOF
-        SELECT COUNT(*) FROM test_upgrade_obj WHERE st_astext(geom) = 'POLYGON((41 20,41 0,21 0,1 20,1 40,21 40,41 20))';
-        SELECT COUNT(*) FROM test_upgrade_obj WHERE st_astext(geog) = 'POINT EMPTY';
-SQL_EOF
-EOF
-
-echo 'Upgrade successful.'

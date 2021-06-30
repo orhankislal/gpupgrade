@@ -8,19 +8,19 @@ set -ex
 apk add --no-progress openssh-client
 cp -R cluster_env_files/.ssh /root/.ssh
 
-echo 'Install PostGIS on source cluster...'
-scp postgis/postgis*.gppkg gpadmin@mdw:/tmp/
+echo 'Install MADlib on source cluster...'
+scp madlib_source/madlib*.gppkg gpadmin@mdw:/tmp/
 time ssh -n gpadmin@mdw "
     set -eux -o pipefail
 
     source /usr/local/greenplum-db-source/greenplum_path.sh
     export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
 
-    gppkg -i /tmp/postgis*.gppkg
-    /usr/local/greenplum-db-source/share/postgresql/contrib/postgis*/postgis_manager.sh postgres install
+    gppkg -i /tmp/madlib*.gppkg
+    /usr/local/greenplum-db-source/madlib/bin/madpack -p greenplum install -c /postgres
 "
 
-echo 'Install PostGIS extension in source cluster...'
+echo 'Create MADlib test case...'
 ssh mdw "
     set -x
 
@@ -28,13 +28,13 @@ ssh mdw "
     export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
 
     psql -d postgres <<SQL_EOF
-        CREATE TABLE test_upgrade_obj(a int, geom geometry, geog geography);
-        INSERT INTO test_upgrade_obj SELECT i, 'SRID=3857;POLYGON((41 20,41 0,21 0,1 20,1 40,21 40,41 20))'::geometry geom, 'POINT EMPTY'::geography geog from generate_series(1,100)i;
+        set search_path = public, madlib;
+        DROP TABLE IF EXISTS table_dep_svec;
 
-        -- These views contain name datatype which is deprecated in GPDB6
-        DROP VIEW geography_columns;
-        DROP VIEW raster_columns;
-        DROP VIEW raster_overviews;
+        CREATE TABLE table_dep_svec(id int, value svec);
+        INSERT INTO table_dep_svec VALUES(1, '{1,2,3}'::float8[]::svec);
+        INSERT INTO table_dep_svec VALUES(2, '{4,5,6}'::float8[]::svec);
+        INSERT INTO table_dep_svec VALUES(3, '{7,8,9}'::float8[]::svec);
 SQL_EOF
 "
 

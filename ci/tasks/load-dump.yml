@@ -8,8 +8,8 @@ image_resource:
     repository: alpine
     tag: latest
 inputs:
-  - name: postgis_gpdb5
-    path: postgis
+  - name: madlib_gpdb5
+    path: madlib_source
   - name: gpupgrade_src
   - name: sqldump
   - name: cluster_env_files
