@@ -105,7 +105,12 @@ func ArchiveSource(source, target string, renameTarget bool) error {
 		return nil
 	}
 
-	if PathExists(source) {
+	sourceExist, err := PathExist(source)
+	if err != nil {
+		return err
+	}
+
+	if sourceExist {
 		if err := renameDataDirectory(source, archive); err != nil {
 			return err
 		}
@@ -162,7 +167,12 @@ func VerifyDataDirectory(path ...string) error {
 
 	for _, f := range PostgresFiles {
 		for _, p := range path {
-			if !PathExists(filepath.Join(p, f)) {
+			exist, pErr := PathExist(filepath.Join(p, f))
+			if pErr != nil {
+				err = errorlist.Append(err, pErr)
+			}
+
+			if !exist {
 				err = errorlist.Append(err, &InvalidDataDirectoryError{p, f})
 			}
 		}
@@ -173,7 +183,11 @@ func VerifyDataDirectory(path ...string) error {
 
 // TODO: Remove alreadyRenamed and use AlreadyRenamed
 func alreadyRenamed(archive, target string) bool {
-	return PathExists(archive) && !PathExists(target)
+
+	archiveExist, _ := PathExist(archive)
+	targetExist, _ := PathExist(target)
+
+	return archiveExist && !targetExist
 }
 
 // AlreadyRenamed infers if a successful rename has already occurred
@@ -190,12 +204,6 @@ func AlreadyRenamed(src, dst string) (bool, error) {
 	}
 
 	return !srcExist && dstExist, nil
-}
-
-// TODO: Remove PathExists and use PathExist
-func PathExists(path string) bool {
-	_, err := utils.System.Stat(path)
-	return err == nil
 }
 
 func PathExist(path string) (bool, error) {
@@ -241,7 +249,12 @@ func DeleteDirectories(directories []string, requiredPaths []string, streams ste
 			return err
 		}
 
-		if !PathExists(directory) {
+		directoryExist, err := PathExist(directory)
+		if err != nil {
+			return err
+		}
+
+		if !directoryExist {
 			fmt.Fprintf(streams.Stdout(), "directory: %q does not exist on host %q\n", directory, hostname)
 			gplog.Debug("Directory: %q does not exist on host %q\n", directory, hostname)
 			continue
@@ -393,8 +406,13 @@ func Verify5XTablespaceDirectories(tsLocations []string) error {
 			}
 
 			path := filepath.Join(tsLocation, dbOidDir.Name(), PGVersion)
-			if !PathExists(path) {
-				mErr = errorlist.Append(mErr, newTablespaceDirectoryError("5X source cluster", "missing "+path))
+			exist, err := PathExist(path)
+			if err != nil {
+				mErr = errorlist.Append(mErr, xerrors.Errorf("checking path %q: %w", path, err))
+			}
+
+			if !exist {
+				mErr = errorlist.Append(mErr, newTablespaceDirectoryError("5X source cluster", "missing "+path), err)
 			}
 		}
 	}

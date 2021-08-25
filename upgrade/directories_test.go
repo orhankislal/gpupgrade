@@ -197,14 +197,8 @@ func TestArchiveSource(t *testing.T) {
 		if calls != 1 {
 			t.Errorf("expected rename to be called once")
 		}
-
-		if upgrade.PathExists(source) {
-			t.Errorf("expected source %q to not exist", source)
-		}
-
-		if !upgrade.PathExists(archive) {
-			t.Errorf("expected archive %q to exist", archive)
-		}
+		testutils.PathMustNotExist(t, source)
+		testutils.PathMustExist(t, archive)
 	})
 
 	t.Run("when renaming succeeds then a re-run succeeds", func(t *testing.T) {
@@ -245,18 +239,11 @@ func TestArchiveSource(t *testing.T) {
 			t.Errorf("got %#v want %#v", err, expected)
 		}
 
-		if !upgrade.PathExists(source) {
-			t.Errorf("expected source %q to exist", source)
-		}
-
 		archive := target + upgrade.OldSuffix
-		if upgrade.PathExists(archive) {
-			t.Errorf("expected archive %q to not exist", archive)
-		}
 
-		if !upgrade.PathExists(target) {
-			t.Errorf("expected target %q to exist", target)
-		}
+		testutils.PathMustExist(t, source)
+		testutils.PathMustNotExist(t, archive)
+		testutils.PathMustExist(t, target)
 
 		utils.System.Rename = os.Rename
 
@@ -287,18 +274,11 @@ func TestArchiveSource(t *testing.T) {
 			t.Errorf("got %#v want %#v", err, expected)
 		}
 
-		if upgrade.PathExists(source) {
-			t.Errorf("expected source %q to not exist", source)
-		}
-
 		archive := target + upgrade.OldSuffix
-		if !upgrade.PathExists(archive) {
-			t.Errorf("expected archive %q to exist", archive)
-		}
 
-		if !upgrade.PathExists(target) {
-			t.Errorf("expected target %q to exist", target)
-		}
+		testutils.PathMustNotExist(t, source)
+		testutils.PathMustExist(t, archive)
+		testutils.PathMustExist(t, target)
 
 		utils.System.Rename = os.Rename
 
@@ -536,13 +516,8 @@ func TestDeleteNewTablespaceDirectories(t *testing.T) {
 			t.Errorf("DeleteNewTablespaceDirectories returned error %+v", err)
 		}
 
-		if upgrade.PathExists(tablespaceDir) {
-			t.Errorf("expected directory %q to be deleted", tablespaceDir)
-		}
-
-		if upgrade.PathExists(dbIDDir) {
-			t.Errorf("expected parent dbID directory %q to be deleted", dbIDDir)
-		}
+		testutils.PathMustNotExist(t, tablespaceDir)
+		testutils.PathMustNotExist(t, dbIDDir)
 	})
 
 	t.Run("rerun of DeleteNewTablespaceDirectories after previous successful execution succeeds", func(t *testing.T) {
@@ -554,18 +529,13 @@ func TestDeleteNewTablespaceDirectories(t *testing.T) {
 			t.Errorf("DeleteNewTablespaceDirectories returned error %+v", err)
 		}
 
-		if upgrade.PathExists(tablespaceDir) {
-			t.Errorf("expected directory %q to be deleted", tablespaceDir)
-		}
-
-		if upgrade.PathExists(dbIdDir) {
-			t.Errorf("expected parent dbid directory %q to be deleted", dbIdDir)
-		}
-
 		err = upgrade.DeleteNewTablespaceDirectories(step.DevNullStream, []string{tablespaceDir})
 		if err != nil {
 			t.Errorf("rerun of DeleteNewTablespaceDirectories returned error %+v", err)
 		}
+
+		testutils.PathMustNotExist(t, tablespaceDir)
+		testutils.PathMustNotExist(t, dbIdDir)
 	})
 
 	t.Run("does not delete parent dbID directory when it's not empty", func(t *testing.T) {
@@ -580,13 +550,8 @@ func TestDeleteNewTablespaceDirectories(t *testing.T) {
 			t.Errorf("DeleteNewTablespaceDirectories returned error %+v", err)
 		}
 
-		if upgrade.PathExists(tablespaceDir) {
-			t.Errorf("expected directory %q to be deleted", tablespaceDir)
-		}
-
-		if !upgrade.PathExists(dbIDDir) {
-			t.Errorf("expected parent dbID directory %q to not be deleted", dbIDDir)
-		}
+		testutils.PathMustNotExist(t, tablespaceDir)
+		testutils.PathMustExist(t, dbIDDir)
 	})
 
 	t.Run("deletes multiple tablespace directories including their parent dbID directory when empty", func(t *testing.T) {
@@ -612,13 +577,8 @@ func TestDeleteNewTablespaceDirectories(t *testing.T) {
 		}
 
 		for _, dir := range dirs {
-			if upgrade.PathExists(dir.tablespaceDir) {
-				t.Errorf("expected directory %q to be deleted", dir.tablespaceDir)
-			}
-
-			if upgrade.PathExists(dir.dbIDDir) {
-				t.Errorf("expected parent dbID directory %q to be deleted", dir.dbIDDir)
-			}
+			testutils.PathMustNotExist(t, dir.tablespaceDir)
+			testutils.PathMustNotExist(t, dir.dbIDDir)
 		}
 	})
 
@@ -636,14 +596,9 @@ func TestDeleteNewTablespaceDirectories(t *testing.T) {
 		}
 
 		for _, dir := range dirs {
-			if !upgrade.PathExists(dir) {
-				t.Errorf("expected directory %q to not be deleted", dir)
-			}
-
 			dbIdDir := filepath.Dir(filepath.Clean(dir))
-			if !upgrade.PathExists(dbIdDir) {
-				t.Errorf("expected parent dbID directory %q to not be deleted", dbIdDir)
-			}
+			testutils.PathMustExist(t, dir)
+			testutils.PathMustExist(t, dbIdDir)
 		}
 	})
 
@@ -670,13 +625,8 @@ func TestDeleteNewTablespaceDirectories(t *testing.T) {
 			t.Errorf("got error %#v want %#v", err, os.ErrPermission)
 		}
 
-		if !upgrade.PathExists(tablespaceDir) {
-			t.Errorf("expected directory %q to not be deleted", tablespaceDir)
-		}
-
-		if !upgrade.PathExists(dbIDDir) {
-			t.Errorf("expected parent dbID directory %q to not be deleted", dbIDDir)
-		}
+		testutils.PathMustExist(t, tablespaceDir)
+		testutils.PathMustExist(t, dbIDDir)
 	})
 
 	t.Run("errors when failing to read parent dbID directory", func(t *testing.T) {
@@ -701,13 +651,8 @@ func TestDeleteNewTablespaceDirectories(t *testing.T) {
 			t.Errorf("got error %#v want %#v", err, os.ErrPermission)
 		}
 
-		if upgrade.PathExists(tablespaceDir) {
-			t.Errorf("expected directory %q to be deleted", tablespaceDir)
-		}
-
-		if !upgrade.PathExists(dbIDDir) {
-			t.Errorf("expected parent dbID directory %q to not be deleted", dbIDDir)
-		}
+		testutils.PathMustNotExist(t, tablespaceDir)
+		testutils.PathMustExist(t, dbIDDir)
 	})
 
 	t.Run("errors when failing to remove parent dbID directory", func(t *testing.T) {
@@ -732,13 +677,8 @@ func TestDeleteNewTablespaceDirectories(t *testing.T) {
 			t.Errorf("got error %#v want %#v", err, os.ErrPermission)
 		}
 
-		if upgrade.PathExists(tablespaceDir) {
-			t.Errorf("expected directory %q to be deleted", tablespaceDir)
-		}
-
-		if !upgrade.PathExists(dbIDDir) {
-			t.Errorf("expected parent dbid directory %q to not be deleted", dbIDDir)
-		}
+		testutils.PathMustNotExist(t, tablespaceDir)
+		testutils.PathMustExist(t, dbIDDir)
 	})
 
 	t.Run("rerun finishes successfully", func(t *testing.T) {
@@ -764,13 +704,8 @@ func TestDeleteNewTablespaceDirectories(t *testing.T) {
 		}
 
 		for _, dir := range dirs {
-			if upgrade.PathExists(dir.tablespaceDir) {
-				t.Errorf("expected directory %q to be deleted", dir.tablespaceDir)
-			}
-
-			if upgrade.PathExists(dir.dbIdDir) {
-				t.Errorf("expected parent dbid directory %q to be deleted", dir.dbIdDir)
-			}
+			testutils.PathMustNotExist(t, dir.tablespaceDir)
+			testutils.PathMustNotExist(t, dir.dbIdDir)
 		}
 
 		err = upgrade.DeleteNewTablespaceDirectories(step.DevNullStream, tsDirs)

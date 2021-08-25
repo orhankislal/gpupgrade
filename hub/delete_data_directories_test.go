@@ -21,7 +21,6 @@ import (
 	"github.com/greenplum-db/gpupgrade/step"
 	"github.com/greenplum-db/gpupgrade/testutils"
 	"github.com/greenplum-db/gpupgrade/testutils/testlog"
-	"github.com/greenplum-db/gpupgrade/upgrade"
 )
 
 func TestDeleteSegmentDataDirs(t *testing.T) {
@@ -214,24 +213,17 @@ func TestDeleteTablespaceDirectories(t *testing.T) {
 
 		// verify user tablespace directories are deleted
 		for _, dir := range []string{tsDir1, tsDir2} {
-			if upgrade.PathExists(dir) {
-				t.Errorf("expected tablespace directory %q to be deleted", dir)
-			}
+
+			testutils.PathMustNotExist(t, dir)
 
 			dbIdDir := filepath.Dir(filepath.Clean(dir))
-			if upgrade.PathExists(dbIdDir) {
-				t.Errorf("expected parent dbid directory %q to be deleted", dbIdDir)
-			}
+			testutils.PathMustNotExist(t, dbIdDir)
 		}
 
 		// verify system tablespace directories are not deleted
-		if !upgrade.PathExists(systemTsDir) {
-			t.Errorf("expected system tablespace directory %q to not be deleted", systemTsDir)
-		}
+		testutils.PathMustExist(t, systemTsDir)
+		testutils.PathMustExist(t, systemDbIdDir)
 
-		if !upgrade.PathExists(systemDbIdDir) {
-			t.Errorf("expected system tablespace parent dbid directory %q to not be deleted", systemDbIdDir)
-		}
 	})
 
 	t.Run("deletes tablespace directories only on the primaries", func(t *testing.T) {

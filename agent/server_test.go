@@ -14,6 +14,7 @@ import (
 	"github.com/greenplum-db/gpupgrade/agent"
 	"github.com/greenplum-db/gpupgrade/testutils"
 	"github.com/greenplum-db/gpupgrade/testutils/testlog"
+	"github.com/greenplum-db/gpupgrade/upgrade"
 )
 
 func TestServerStart(t *testing.T) {
@@ -29,14 +30,12 @@ func TestServerStart(t *testing.T) {
 			StateDir: stateDir,
 		})
 
-		if pathExists(stateDir) {
-			t.Fatal("expected stateDir to not exist")
-		}
+		testutils.PathMustNotExist(t, stateDir)
 
 		go server.Start()
 		defer server.Stop()
 
-		exists, err := doesPathEventuallyExist(stateDir)
+		exists, err := doesPathEventuallyExist(t, stateDir)
 		if err != nil {
 			t.Fatalf("unexpected error: %#v", err)
 		}
@@ -54,25 +53,25 @@ func TestServerStart(t *testing.T) {
 			StateDir: stateDir,
 		})
 
-		if !pathExists(stateDir) {
-			t.Fatal("expected stateDir to exist")
-		}
+		testutils.PathMustExist(t, stateDir)
 
 		go server.Start()
 		defer server.Stop()
 
-		if !pathExists(stateDir) {
-			t.Error("expected stateDir to exist")
-		}
+		testutils.PathMustExist(t, stateDir)
 	})
 }
 
-func doesPathEventuallyExist(path string) (bool, error) {
+func doesPathEventuallyExist(t *testing.T, path string) (bool, error) {
 	startTime := time.Now()
 	timeout := 3 * time.Second
 
 	for {
-		exists := pathExists(path)
+		exists, err := upgrade.PathExist(path)
+		if err != nil {
+			t.Fatalf("checking path %q: %v", path, err)
+		}
+
 		if exists {
 			return true, nil
 		}
@@ -83,9 +82,4 @@ func doesPathEventuallyExist(path string) (bool, error) {
 
 		time.Sleep(10 * time.Millisecond)
 	}
-}
-
-func pathExists(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
 }

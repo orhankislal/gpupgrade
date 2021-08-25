@@ -135,8 +135,6 @@ func TestAtomicallyWrite(t *testing.T) {
 			t.Errorf("returned error type %T want %T", err, expected)
 		}
 
-		if upgrade.PathExists(path) {
-			t.Errorf("expected file %q to not exist", path)
-		}
+		testutils.PathMustNotExist(t, path)
 	})
 }

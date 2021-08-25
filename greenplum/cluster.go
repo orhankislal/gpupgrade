@@ -351,8 +351,13 @@ func runStartStopCmd(stream step.OutStreams, gphome, command string, env string)
 // IsMasterRunning returns whether the cluster's master process is running.
 func (c *Cluster) IsMasterRunning(stream step.OutStreams) (bool, error) {
 	path := filepath.Join(c.MasterDataDir(), "postmaster.pid")
-	if !upgrade.PathExists(path) {
-		return false, nil
+	exist, err := upgrade.PathExist(path)
+	if err != nil {
+		return false, err
+	}
+
+	if !exist {
+		return false, err
 	}
 
 	cmd := execCommand("pgrep", "-F", path)
@@ -362,7 +367,7 @@ func (c *Cluster) IsMasterRunning(stream step.OutStreams) (bool, error) {
 
 	gplog.Debug("checking if master process is running with %s", cmd.String())
 
-	err := cmd.Run()
+	err = cmd.Run()
 	var exitErr *exec.ExitError
 	if xerrors.As(err, &exitErr) {
 		if exitErr.ExitCode() == 1 {

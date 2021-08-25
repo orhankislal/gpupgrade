@@ -211,17 +211,38 @@ func MustWriteToFile(t *testing.T, path string, contents string) {
 func VerifyRename(t *testing.T, source, target string) {
 	t.Helper()
 
-	if !upgrade.PathExists(source) {
-		t.Errorf("expected source %q to exist", source)
-	}
-
 	archive := target + upgrade.OldSuffix
-	if !upgrade.PathExists(archive) {
-		t.Errorf("expected archive %q to exist", archive)
+
+	PathMustExist(t, source)
+	PathMustExist(t, archive)
+	PathMustNotExist(t, target)
+
+}
+
+func PathMustExist(t *testing.T, path string){
+	t.Helper()
+	checkPath(t, path, true)
+}
+
+func PathMustNotExist(t *testing.T, path string){
+	t.Helper()
+	checkPath(t, path, false)
+}
+
+func checkPath(t *testing.T, path string, shouldExist bool) {
+	t.Helper()
+
+	exist, err := upgrade.PathExist(path)
+	if err != nil {
+		t.Fatalf("unexpected error checking path %q: %v", path, err)
 	}
 
-	if upgrade.PathExists(target) {
-		t.Errorf("expected target %q to not exist", target)
+	if shouldExist && !exist {
+		t.Fatalf("expected path %q to exist", path)
+	}
+
+	if !shouldExist && exist {
+		t.Fatalf("expected path %q to not exist", path)
 	}
 }
 

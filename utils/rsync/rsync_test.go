@@ -15,7 +15,6 @@ import (
 	"github.com/greenplum-db/gpupgrade/testutils"
 	"github.com/greenplum-db/gpupgrade/testutils/exectest"
 	"github.com/greenplum-db/gpupgrade/testutils/testlog"
-	"github.com/greenplum-db/gpupgrade/utils"
 	"github.com/greenplum-db/gpupgrade/utils/rsync"
 )
 
@@ -187,9 +186,7 @@ func TestRsync(t *testing.T) {
 			t.Errorf("Rsync() returned error %+v", err)
 		}
 
-		if pathExists(filepath.Join(destination, filename)) {
-			t.Errorf("destination directory file %q should not exist, but it does", filename)
-		}
+		testutils.PathMustNotExist(t, filepath.Join(destination, filename))
 	})
 
 	t.Run("does not copy files in the exclusion list from the source directory", func(t *testing.T) {
@@ -212,9 +209,7 @@ func TestRsync(t *testing.T) {
 			t.Errorf("Rsync() returned error %+v", err)
 		}
 
-		if pathExists(filepath.Join(destination, filename)) {
-			t.Errorf("destination directory file %q should not exist, but it does", filename)
-		}
+		testutils.PathMustNotExist(t, filepath.Join(destination, filename))
 	})
 
 	t.Run("preserves files in the exclusion list in the destination directory", func(t *testing.T) {
@@ -241,18 +236,9 @@ func TestRsync(t *testing.T) {
 			t.Errorf("Rsync() returned error %+v", err)
 		}
 
-		if !pathExists(filepath.Join(destination, filename1)) {
-			t.Errorf("file %q does not exist", filename1)
-		}
-
-		if !pathExists(filepath.Join(destination, filename2)) {
-			t.Errorf("file %q does not exist", filename2)
-		}
-
-		if !pathExists(filepath.Join(destination, filename3)) {
-			t.Errorf("file %q does not exist", filename3)
-		}
-
+		testutils.PathMustExist(t, filepath.Join(destination, filename1))
+		testutils.PathMustExist(t, filepath.Join(destination, filename2))
+		testutils.PathMustExist(t, filepath.Join(destination, filename3))
 	})
 
 	t.Run("when an input stream is provided, it returns an RsyncError that wraps an ExitError", func(t *testing.T) {
@@ -394,9 +380,4 @@ func TestRsync(t *testing.T) {
 			t.Errorf("got error '%#v' want '%#v'", err, rsync.ErrInvalidRsyncSourcePath)
 		}
 	})
-}
-
-func pathExists(path string) bool {
-	_, err := utils.System.Stat(path)
-	return err == nil
 }
