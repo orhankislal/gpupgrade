@@ -101,7 +101,14 @@ func ArchiveSource(source, target string, renameTarget bool) error {
 	// Instead of manipulating the source to create the archive we append the
 	// old suffix to the target to achieve the same result.
 	archive := target + OldSuffix
-	if alreadyRenamed(archive, target) {
+
+	alreadyRenamed, err := AlreadyRenamed(target, archive)
+
+	if err != nil {
+		return err
+	}
+
+	if alreadyRenamed {
 		return nil
 	}
 
@@ -179,15 +186,6 @@ func VerifyDataDirectory(path ...string) error {
 	}
 
 	return err
-}
-
-// TODO: Remove alreadyRenamed and use AlreadyRenamed
-func alreadyRenamed(archive, target string) bool {
-
-	archiveExist, _ := PathExist(archive)
-	targetExist, _ := PathExist(target)
-
-	return archiveExist && !targetExist
 }
 
 // AlreadyRenamed infers if a successful rename has already occurred
