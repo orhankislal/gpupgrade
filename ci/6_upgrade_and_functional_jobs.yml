@@ -48,9 +48,9 @@
           resource: madlib_1.19.0_gpdb{{.Target}}_centos{{.CentosVersion}}_gppkg
         {{- if ne .CentosVersion "6" }}
         - get: pxf_rpm_source
-          resource: pxf_5_gpdb{{.Source}}_centos{{.CentosVersion}}_rpm
+          resource: pxf_6_gpdb{{.Source}}_centos{{.CentosVersion}}_rpm
         - get: pxf_rpm_target
-          resource: pxf_5_gpdb{{.Target}}_centos{{.CentosVersion}}_rpm
+          resource: pxf_6_gpdb{{.Target}}_centos{{.CentosVersion}}_rpm
         {{- end }}
         {{- end }}
     - put: terraform

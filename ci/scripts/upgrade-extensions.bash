@@ -85,10 +85,10 @@ SQL_EOF
     $(typeset -f test_pxf) # allow local function on remote host
     if test_pxf '$OS_VERSION'; then
         echo 'Initialize PXF on target cluster...'
-        export PXF_CONF=/home/gpadmin/pxf
+        export PXF_BASE=/home/gpadmin/pxf
         export JAVA_HOME=/usr/lib/jvm/jre
 
-        /usr/local/pxf-gp6/bin/pxf cluster init
+        /usr/local/pxf-gp6/bin/pxf cluster register
         psql -v ON_ERROR_STOP=1 -d postgres -c 'CREATE EXTENSION pxf;'
     fi
 
