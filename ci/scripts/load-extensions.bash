@@ -104,8 +104,6 @@ SQL_EOF
 "
 
 install_pxf() {
-    local PXF_BASE=/home/gpadmin/pxf
-
     echo "Installing pxf on all hosts in the source cluster..."
     echo "${GOOGLE_CREDENTIALS}" > /tmp/key.json
 
@@ -114,10 +112,6 @@ install_pxf() {
         scp pxf_rpm_source/*.rpm "gpadmin@${host}":/tmp/pxf_source.rpm
         scp /tmp/key.json "gpadmin@${host}":/tmp/key.json
 
-        ssh -n "${host}" "
-            echo 'export JAVA_HOME=/usr/lib/jvm/jre' >> /home/gpadmin/.bashrc
-        "
-
         ssh -n "centos@${host}" "
             set -eux -o pipefail
 
@@ -125,6 +119,8 @@ install_pxf() {
             sudo yum install -q -y java-1.8.0-openjdk.x86_64
             sudo rpm -ivh /tmp/pxf_source.rpm
             sudo chown -R gpadmin:gpadmin /usr/local/pxf*
+            sudo sed -i 's|# export JAVA_HOME=/usr/java/default|export JAVA_HOME=/usr/lib/jvm/jre|' /usr/local/pxf-gp5/conf/pxf-env.sh
+            sudo sed -i 's|# export JAVA_HOME=/usr/java/default|export JAVA_HOME=/usr/lib/jvm/jre|' /usr/local/pxf-gp6/conf/pxf-env.sh
         "
     done
 
@@ -135,14 +131,15 @@ install_pxf() {
 
         echo 'Initialize pxf...'
         export GPHOME=$GPHOME_SOURCE
-        export PXF_BASE=$PXF_BASE
         export JAVA_HOME=/usr/lib/jvm/jre
 
-        mkdir -p ${PXF_BASE}/servers/google
+        export PXF_LOCATION=/usr/local/pxf-gp5
+        mkdir -p \$PXF_LOCATION/servers/google
+
         /usr/local/pxf-*/bin/pxf cluster register
 
-        cp /usr/local/pxf-*/templates/gs-site.xml ${PXF_BASE}/servers/google/
-        sed -i 's|YOUR_GOOGLE_STORAGE_KEYFILE|/tmp/key.json|' ${PXF_BASE}/servers/google/gs-site.xml
+        cp \$PXF_LOCATION/templates/gs-site.xml \$PXF_LOCATION/servers/google/
+        sed -i 's|YOUR_GOOGLE_STORAGE_KEYFILE|/tmp/key.json|' \$PXF_LOCATION/servers/google/gs-site.xml
         /usr/local/pxf-*/bin/pxf cluster sync
         /usr/local/pxf-*/bin/pxf cluster start
 
