@@ -144,4 +144,5 @@ ssh -n mdw "
     fi
 "
 
+exit 1
 echo "Upgrade successful..."
