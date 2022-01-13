@@ -79,8 +79,6 @@ indexes AS
    WHERE
       c.relkind = 'r'::"char"
       AND i.relkind = 'i'::"char"
-      AND c.relhassubclass = 'f'
-      AND x.indisunique = 'f'
 )
 SELECT
 'DO $$ BEGIN IF NOT EXISTS ( SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE  c.relname = ''' || indexname ||
